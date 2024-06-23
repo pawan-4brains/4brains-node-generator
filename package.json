@@ -1,0 +1,21 @@
+{
+  "name": "4brains-node-generator",
+  "version": "2.6.3",
+  "description": "A CLI tool to generate a Node.js app by 4Brains Technologies",
+  "main": "index.js",
+  "type": "module",
+  "bin": {
+    "node-app": "index.js",
+    "add-api": "add-api.js",
+    "add-mongodb": "add-mongodb.js",
+    "add-socket": "add-socket.js",
+    "add-mongodb-schema": "add-mongodb-schema.js",
+    "add-login": "add-login.js",
+    "add-mongodb-insert": "add-mongodb-insert.js"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "4Brains",
+  "license": "ISC"
+}

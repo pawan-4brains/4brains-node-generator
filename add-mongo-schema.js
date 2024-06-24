@@ -29,6 +29,12 @@ function toPascalCase(str) {
   return camelCaseStr.charAt(0).toUpperCase() + camelCaseStr.slice(1);
 }
 
+function checkMongoDBConfig() {
+  const projectRoot = process.cwd();
+  const configFilePath = path.join(projectRoot, "config", "db.js");
+  return fs.existsSync(configFilePath);
+}
+
 function promptSchemaDetails(schemaName) {
   const fields = [];
 
@@ -64,15 +70,30 @@ function promptSchemaDetails(schemaName) {
                   askField();
                   return;
                 }
-                const field = {
-                  name: fieldName.trim(),
-                  type: fieldType,
-                };
-                if (required === "y") {
-                  field.required = true;
-                }
-                fields.push(field);
-                askField();
+
+                rl.question("Is this field unique? (y/n): ", (isUnique) => {
+                  const unique = isUnique.trim().toLowerCase();
+                  if (unique !== "y" && unique !== "n") {
+                    console.error(
+                      "Invalid selection. Please enter 'y' or 'n'."
+                    );
+                    askField();
+                    return;
+                  }
+
+                  const field = {
+                    name: fieldName.trim(),
+                    type: fieldType,
+                  };
+                  if (required === "y") {
+                    field.required = true;
+                  }
+                  if (unique === "y") {
+                    field.unique = true;
+                  }
+                  fields.push(field);
+                  askField();
+                });
               });
             }
           );
@@ -104,8 +125,8 @@ const ${pascalSchemaName}Schema = new mongoose.Schema({
       if (field.required) {
         fieldDef += `, required: true`;
       }
-      if (field.default) {
-        fieldDef += `, default: ${field.default}`;
+      if (field.unique) {
+        fieldDef += `, unique: true`;
       }
       fieldDef += ` }`;
       return fieldDef;
@@ -123,10 +144,17 @@ export default ${pascalSchemaName};
 }
 
 if (process.argv.length !== 3) {
-  console.error("Usage: add-mongodb-schema <schemaName>");
+  console.error("Usage: add-mongo-schema <schemaName>");
   process.exit(1);
 }
 
 const schemaName = process.argv[2];
+
+if (!checkMongoDBConfig()) {
+  console.error(
+    "MongoDB is not configured. Please run 'node-app add-mongo' first."
+  );
+  process.exit(1);
+}
 
 promptSchemaDetails(schemaName);

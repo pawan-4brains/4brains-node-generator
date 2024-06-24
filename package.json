@@ -1,21 +1,37 @@
 {
   "name": "4brains-node-generator",
-  "version": "2.6.3",
+  "version": "2.8.0",
   "description": "A CLI tool to generate a Node.js app by 4Brains Technologies",
   "main": "index.js",
   "type": "module",
   "bin": {
     "node-app": "index.js",
     "add-api": "add-api.js",
-    "add-mongodb": "add-mongodb.js",
+    "add-mongo": "add-mongo.js",
     "add-socket": "add-socket.js",
-    "add-mongodb-schema": "add-mongodb-schema.js",
+    "add-websocket": "add-websocket.js",
+    "add-mongo-schema": "add-mongo-schema.js",
     "add-login": "add-login.js",
-    "add-mongodb-insert": "add-mongodb-insert.js"
+    "add-mongo-insert": "add-mongo-insert.js",
+    "add-mongo-update": "add-mongo-update.js",
+    "add-mongo-read": "add-mongo-read.js",
+    "add-mongo-delete": "add-mongo-delete.js"
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/pawan-4brains/4brains-node-generator"
+  },
+  "keywords": [
+    "node",
+    "generator",
+    "express",
+    "express-generator",
+    "node.js",
+    "Node.js skeleton"
+  ],
   "author": "4Brains",
   "license": "ISC"
 }

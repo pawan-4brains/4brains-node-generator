@@ -3,11 +3,11 @@
 import fs from "fs";
 import path from "path";
 import { execSync } from "child_process";
+import { fileURLToPath } from "url";
 
-const skeletonPath = path.join(
-  path.dirname(new URL(import.meta.url).pathname),
-  "skeleton"
-);
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const skeletonPath = path.join(__dirname, "skeleton");
 
 function copyRecursiveSync(src, dest) {
   const exists = fs.existsSync(src);
@@ -53,12 +53,63 @@ function createSkeletonApp(projectName) {
   console.log("Dependencies installed successfully.");
 }
 
+function checkMongoDBConfig() {
+  const projectRoot = process.cwd();
+  const configFilePath = path.join(projectRoot, "config", "db.js");
+  return fs.existsSync(configFilePath);
+}
+
+function checkModelsExist() {
+  const projectRoot = process.cwd();
+  const modelsDir = path.join(projectRoot, "src", "models");
+  return fs.existsSync(modelsDir) && fs.readdirSync(modelsDir).length > 0;
+}
+
+function checkRoutesDir() {
+  const projectRoot = process.cwd();
+  const routesDir = path.join(projectRoot, "src", "routes");
+  return fs.existsSync(routesDir);
+}
+
+function validateMongoDBConfigAndModels() {
+  if (!checkMongoDBConfig()) {
+    console.error(
+      "MongoDB is not configured. Please run 'node-app add-mongodb' first."
+    );
+    process.exit(1);
+  }
+  if (!checkModelsExist()) {
+    console.error("No models found. Please create a model first.");
+    process.exit(1);
+  }
+}
+
+function showHelp() {
+  console.log(`
+Usage: node-app <command> [options]
+
+Commands:
+  init <projectName>        Create a new Node.js project with the given name.
+  add-api <endpointName>    Add a new API endpoint with the given name.
+  add-mongodb               Configure MongoDB for the project.
+  add-socket                Add Socket.IO support to the project.
+  add-websocket             Add WebSocket support to the project.
+  add-mongodb-schema <schemaName>  Add a new MongoDB schema with the given name.
+  add-login                 Add a login route to the project.
+  add-mongodb-insert        Add an insert route for MongoDB.
+  add-mongodb-update        Add an update route for MongoDB.
+  add-mongodb-read          Add a read route for MongoDB.
+  add-mongodb-delete        Add a delete route for MongoDB.
+  
+Options:
+  -h, --help                Show this help message.
+`);
+}
+
 const args = process.argv.slice(2);
-if (args.length < 1) {
-  console.error(
-    "Usage: node-app init <projectName> OR node-app add-api <endpointName> OR node-app add-mongodb OR node-app add-socket OR node-app add-websocket"
-  );
-  process.exit(1);
+if (args.length < 1 || args.includes("-h") || args.includes("--help")) {
+  showHelp();
+  process.exit(0);
 }
 
 const command = args[0];
@@ -75,66 +126,81 @@ if (command === "init") {
     console.error("Usage: node-app add-api <endpointName>");
     process.exit(1);
   }
-  execSync(
-    `node ${path.join(
-      path.dirname(new URL(import.meta.url).pathname),
-      "add-api.js"
-    )} ${param}`,
-    { stdio: "inherit" }
-  );
+  execSync(`node ${path.join(__dirname, "add-api.js")} ${param}`, {
+    stdio: "inherit",
+  });
 } else if (command === "add-mongodb") {
-  execSync(
-    `node ${path.join(
-      path.dirname(new URL(import.meta.url).pathname),
-      "add-mongodb.js"
-    )}`,
-    { stdio: "inherit" }
-  );
+  execSync(`node ${path.join(__dirname, "add-mongodb.js")}`, {
+    stdio: "inherit",
+  });
 } else if (command === "add-socket") {
-  execSync(
-    `node ${path.join(
-      path.dirname(new URL(import.meta.url).pathname),
-      "add-socket.js"
-    )}`,
-    { stdio: "inherit" }
-  );
+  execSync(`node ${path.join(__dirname, "add-socket.js")}`, {
+    stdio: "inherit",
+  });
 } else if (command === "add-websocket") {
-  execSync(
-    `node ${path.join(
-      path.dirname(new URL(import.meta.url).pathname),
-      "add-websocket.js"
-    )}`,
-    { stdio: "inherit" }
-  );
+  execSync(`node ${path.join(__dirname, "add-websocket.js")}`, {
+    stdio: "inherit",
+  });
 } else if (command === "add-mongodb-schema") {
+  if (!checkMongoDBConfig()) {
+    console.error(
+      "MongoDB is not configured. Please run 'node-app add-mongodb' first."
+    );
+    process.exit(1);
+  }
   if (!param) {
     console.error("Usage: node-app add-mongodb-schema <schemaName>");
     process.exit(1);
   }
-  execSync(
-    `node ${path.join(
-      path.dirname(new URL(import.meta.url).pathname),
-      "add-mongodb-schema.js"
-    )} ${param}`,
-    { stdio: "inherit" }
-  );
+  execSync(`node ${path.join(__dirname, "add-mongodb-schema.js")} ${param}`, {
+    stdio: "inherit",
+  });
 } else if (command === "add-login") {
-  execSync(
-    `node ${path.join(
-      path.dirname(new URL(import.meta.url).pathname),
-      "add-login.js"
-    )}`,
-    { stdio: "inherit" }
-  );
+  if (!checkRoutesDir()) {
+    console.error("No routes directory found in src/routes");
+    process.exit(1);
+  }
+  validateMongoDBConfigAndModels();
+  execSync(`node ${path.join(__dirname, "add-login.js")}`, {
+    stdio: "inherit",
+  });
 } else if (command === "add-mongodb-insert") {
-  execSync(
-    `node ${path.join(
-      path.dirname(new URL(import.meta.url).pathname),
-      "add-mongodb-insert.js"
-    )}`,
-    { stdio: "inherit" }
-  );
+  if (!checkRoutesDir()) {
+    console.error("No routes directory found in src/routes");
+    process.exit(1);
+  }
+  validateMongoDBConfigAndModels();
+  execSync(`node ${path.join(__dirname, "add-mongodb-insert.js")}`, {
+    stdio: "inherit",
+  });
+} else if (command === "add-mongodb-update") {
+  if (!checkRoutesDir()) {
+    console.error("No routes directory found in src/routes");
+    process.exit(1);
+  }
+  validateMongoDBConfigAndModels();
+  execSync(`node ${path.join(__dirname, "add-mongodb-update.js")}`, {
+    stdio: "inherit",
+  });
+} else if (command === "add-mongodb-read") {
+  if (!checkRoutesDir()) {
+    console.error("No routes directory found in src/routes");
+    process.exit(1);
+  }
+  validateMongoDBConfigAndModels();
+  execSync(`node ${path.join(__dirname, "add-mongodb-read.js")}`, {
+    stdio: "inherit",
+  });
+} else if (command === "add-mongodb-delete") {
+  if (!checkRoutesDir()) {
+    console.error("No routes directory found in src/routes");
+    process.exit(1);
+  }
+  validateMongoDBConfigAndModels();
+  execSync(`node ${path.join(__dirname, "add-mongodb-delete.js")}`, {
+    stdio: "inherit",
+  });
 } else {
-  console.error("Unknown command");
+  console.error("Unknown command. Use -h or --help for help.");
   process.exit(1);
 }

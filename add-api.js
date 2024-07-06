@@ -3,6 +3,7 @@
 import fs from "fs";
 import path from "path";
 import readline from "readline";
+import chalk from "chalk";
 
 const rl = readline.createInterface({
   input: process.stdin,
@@ -40,14 +41,17 @@ function createApi(endpointName, method) {
 
   if (fs.existsSync(apiFile) && checkDuplicateMethod(apiFile, method)) {
     console.error(
-      `API endpoint /${endpointName} with method ${method.toUpperCase()} already exists. Choose a different method or endpoint name.`
+      chalk.red(
+        `API endpoint /${endpointName} with method ${method.toUpperCase()} already exists. Choose a different method or endpoint name.`
+      )
     );
-    process.exit(1);
+    rl.close();
+    return;
   }
 
   let apiContent;
   const methodContent = `
-router.${method.toLowerCase()}('/', (req, res) => {
+router.${method.toLowerCase()}('/', async (req, res) => {
   res.json({ msg: '${endpointName} ${method.toUpperCase()} endpoint works' });
 });
   `;
@@ -55,11 +59,13 @@ router.${method.toLowerCase()}('/', (req, res) => {
   if (fs.existsSync(apiFile)) {
     // Read existing content and append the new method if not already present
     apiContent = fs.readFileSync(apiFile, "utf8");
-    if (!apiContent.includes(methodContent)) {
-      apiContent = apiContent.replace(
-        "export default router;",
-        methodContent.trim() + "\n\nexport default router;"
-      );
+    if (!apiContent.includes(methodContent.trim())) {
+      const insertionIndex = apiContent.lastIndexOf("export default router;");
+      apiContent =
+        apiContent.slice(0, insertionIndex) +
+        methodContent.trim() +
+        "\n\n" +
+        apiContent.slice(insertionIndex);
     }
   } else {
     // Create new content for the API file
@@ -106,14 +112,16 @@ export default router;
   fs.writeFileSync(indexPath, indexContent, "utf8");
 
   console.log(
-    `API endpoint /${endpointName} with method ${method.toUpperCase()} created/updated successfully.`
+    chalk.green(
+      `API endpoint /${endpointName} with method ${method.toUpperCase()} created/updated successfully.`
+    )
   );
+  rl.close();
 }
 
 function exitWithError(message) {
-  console.error(message);
+  console.error(chalk.red(message));
   rl.close();
-  process.exit(1);
 }
 
 if (process.argv.length !== 3) {
@@ -122,17 +130,19 @@ if (process.argv.length !== 3) {
 
 const endpointName = process.argv[2];
 
-console.log("Choose HTTP method:");
+console.log(chalk.cyan("Choose HTTP method:"));
 methods.forEach((method, index) => {
-  console.log(`${index + 1}. ${method}`);
+  console.log(chalk.cyan(`${index + 1}. ${method}`));
 });
 
-rl.question("Enter the number for the HTTP method: ", (answer) => {
-  const methodIndex = parseInt(answer, 10) - 1;
-  if (methodIndex >= 0 && methodIndex < methods.length) {
-    createApi(endpointName, methods[methodIndex]);
-    rl.close();
-  } else {
-    exitWithError("Invalid selection. Please choose a valid number.");
+rl.question(
+  chalk.yellow("Enter the number for the HTTP method: "),
+  (answer) => {
+    const methodIndex = parseInt(answer, 10) - 1;
+    if (methodIndex >= 0 && methodIndex < methods.length) {
+      createApi(endpointName, methods[methodIndex]);
+    } else {
+      exitWithError("Invalid selection. Please choose a valid number.");
+    }
   }
-});
+);

@@ -4,6 +4,7 @@ import fs from "fs";
 import path from "path";
 import readline from "readline";
 import { execSync } from "child_process";
+import chalk from "chalk";
 
 const rl = readline.createInterface({
   input: process.stdin,
@@ -95,28 +96,36 @@ function addMongoDB(devUri, prodUri) {
   execSync("npm install mongoose", { stdio: "inherit" });
 
   console.log(
-    `MongoDB integration added with development URI: ${devUri} and production URI: ${prodUri}`
+    chalk.green(
+      `MongoDB integration added with development URI: ${devUri} and production URI: ${prodUri}`
+    )
   );
 }
 
 if (isDatabaseConfigured()) {
   console.log(
-    "MongoDB is already configured in your environment files. Aborting operation."
+    chalk.yellow(
+      "MongoDB is already configured in your environment files. Aborting operation."
+    )
   );
   rl.close();
+  process.exit(0);
 } else {
   function promptForDatabaseDetails(env, callback) {
-    console.log(`Enter details for the ${env} database:`);
+    console.log(chalk.cyan(`\nEnter details for the ${env} database:`));
 
     function askDatabaseName() {
-      rl.question("Enter the MongoDB database name: ", (dbName) => {
-        if (!dbName.trim()) {
-          console.log("Database name is required.");
-          askDatabaseName();
-        } else {
-          callback(dbName);
+      rl.question(
+        chalk.yellow("Enter the MongoDB database name: "),
+        (dbName) => {
+          if (!dbName.trim()) {
+            console.log(chalk.red("Database name is required."));
+            askDatabaseName();
+          } else {
+            callback(dbName);
+          }
         }
-      });
+      );
     }
 
     askDatabaseName();
@@ -124,68 +133,86 @@ if (isDatabaseConfigured()) {
 
   promptForDatabaseDetails("development", (devDbName) => {
     rl.question(
-      "Enter the MongoDB IP address (default: 127.0.0.1): ",
+      chalk.yellow("Enter the MongoDB IP address (default: 127.0.0.1): "),
       (devIpAddress) => {
         const devIp = devIpAddress.trim() || "127.0.0.1";
-        rl.question("Enter the MongoDB port (default: 27017): ", (devPort) => {
-          const devDbPort = devPort.trim() || "27017";
-          rl.question(
-            "Enter the MongoDB user ID (leave blank if none): ",
-            (devUserId) => {
-              rl.question(
-                "Enter the MongoDB password (leave blank if none): ",
-                (devPassword) => {
-                  let devUri = `mongodb://${devIp}:${devDbPort}/${devDbName}`;
-                  if (devUserId && devPassword) {
-                    devUri = `mongodb://${devUserId}:${devPassword}@${devIp}:${devDbPort}/${devDbName}`;
-                  } else if (devUserId || devPassword) {
-                    console.error(
-                      "Both user ID and password must be provided together."
-                    );
-                    process.exit(1);
-                  }
+        rl.question(
+          chalk.yellow("Enter the MongoDB port (default: 27017): "),
+          (devPort) => {
+            const devDbPort = devPort.trim() || "27017";
+            rl.question(
+              chalk.yellow("Enter the MongoDB user ID (leave blank if none): "),
+              (devUserId) => {
+                rl.question(
+                  chalk.yellow(
+                    "Enter the MongoDB password (leave blank if none): "
+                  ),
+                  (devPassword) => {
+                    let devUri = `mongodb://${devIp}:${devDbPort}/${devDbName}`;
+                    if (devUserId && devPassword) {
+                      devUri = `mongodb://${devUserId}:${devPassword}@${devIp}:${devDbPort}/${devDbName}`;
+                    } else if (devUserId || devPassword) {
+                      console.error(
+                        chalk.red(
+                          "Both user ID and password must be provided together."
+                        )
+                      );
+                      process.exit(1);
+                    }
 
-                  promptForDatabaseDetails("production", (prodDbName) => {
-                    rl.question(
-                      "Enter the MongoDB IP address (default: 127.0.0.1): ",
-                      (prodIpAddress) => {
-                        const prodIp = prodIpAddress.trim() || "127.0.0.1";
-                        rl.question(
-                          "Enter the MongoDB port (default: 27017): ",
-                          (prodPort) => {
-                            const prodDbPort = prodPort.trim() || "27017";
-                            rl.question(
-                              "Enter the MongoDB user ID (leave blank if none): ",
-                              (prodUserId) => {
-                                rl.question(
-                                  "Enter the MongoDB password (leave blank if none): ",
-                                  (prodPassword) => {
-                                    let prodUri = `mongodb://${prodIp}:${prodDbPort}/${prodDbName}`;
-                                    if (prodUserId && prodPassword) {
-                                      prodUri = `mongodb://${prodUserId}:${prodPassword}@${prodIp}:${prodDbPort}/${prodDbName}`;
-                                    } else if (prodUserId || prodPassword) {
-                                      console.error(
-                                        "Both user ID and password must be provided together."
-                                      );
-                                      process.exit(1);
+                    promptForDatabaseDetails("production", (prodDbName) => {
+                      rl.question(
+                        chalk.yellow(
+                          "Enter the MongoDB IP address (default: 127.0.0.1): "
+                        ),
+                        (prodIpAddress) => {
+                          const prodIp = prodIpAddress.trim() || "127.0.0.1";
+                          rl.question(
+                            chalk.yellow(
+                              "Enter the MongoDB port (default: 27017): "
+                            ),
+                            (prodPort) => {
+                              const prodDbPort = prodPort.trim() || "27017";
+                              rl.question(
+                                chalk.yellow(
+                                  "Enter the MongoDB user ID (leave blank if none): "
+                                ),
+                                (prodUserId) => {
+                                  rl.question(
+                                    chalk.yellow(
+                                      "Enter the MongoDB password (leave blank if none): "
+                                    ),
+                                    (prodPassword) => {
+                                      let prodUri = `mongodb://${prodIp}:${prodDbPort}/${prodDbName}`;
+                                      if (prodUserId && prodPassword) {
+                                        prodUri = `mongodb://${prodUserId}:${prodPassword}@${prodIp}:${prodDbPort}/${prodDbName}`;
+                                      } else if (prodUserId || prodPassword) {
+                                        console.error(
+                                          chalk.red(
+                                            "Both user ID and password must be provided together."
+                                          )
+                                        );
+                                        process.exit(1);
+                                      }
+
+                                      addMongoDB(devUri, prodUri);
+                                      rl.close();
+                                      process.exit(0);
                                     }
-
-                                    addMongoDB(devUri, prodUri);
-                                    rl.close();
-                                  }
-                                );
-                              }
-                            );
-                          }
-                        );
-                      }
-                    );
-                  });
-                }
-              );
-            }
-          );
-        });
+                                  );
+                                }
+                              );
+                            }
+                          );
+                        }
+                      );
+                    });
+                  }
+                );
+              }
+            );
+          }
+        );
       }
     );
   });

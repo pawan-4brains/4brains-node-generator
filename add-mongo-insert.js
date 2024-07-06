@@ -3,6 +3,7 @@
 import fs from "fs";
 import path from "path";
 import readline from "readline";
+import chalk from "chalk";
 import { execSync } from "child_process";
 
 const rl = readline.createInterface({
@@ -14,15 +15,15 @@ function listRoutes() {
   const projectRoot = process.cwd();
   const routesDir = path.join(projectRoot, "src", "routes");
   if (!fs.existsSync(routesDir)) {
-    console.error("No routes directory found in src/routes");
-    process.exit(1);
+    console.error(chalk.red("No routes directory found in src/routes"));
+    return [];
   }
   const routeFiles = fs
     .readdirSync(routesDir)
     .filter((file) => file.endsWith(".js"));
   if (routeFiles.length === 0) {
-    console.error("No route files found in src/routes");
-    process.exit(1);
+    console.error(chalk.red("No route files found in src/routes"));
+    return [];
   }
   return routeFiles;
 }
@@ -31,15 +32,15 @@ function listModels() {
   const projectRoot = process.cwd();
   const modelsDir = path.join(projectRoot, "src", "models");
   if (!fs.existsSync(modelsDir)) {
-    console.error("No models directory found in src/models");
-    process.exit(1);
+    console.error(chalk.red("No models directory found in src/models"));
+    return [];
   }
   const modelFiles = fs
     .readdirSync(modelsDir)
     .filter((file) => file.endsWith(".js"));
   if (modelFiles.length === 0) {
-    console.error("No model files found in src/models");
-    process.exit(1);
+    console.error(chalk.red("No model files found in src/models"));
+    return [];
   }
   return modelFiles;
 }
@@ -53,13 +54,15 @@ function getModelSchema(modelName) {
     modelName + ".js"
   );
   const modelFileContent = fs.readFileSync(modelFilePath, "utf8");
-  const schemaRegex = /new mongoose\.Schema\((\{[\s\S]*?\})\)/;
+
+  // Improved regex to handle beautified code
+  const schemaRegex = /new mongoose\.Schema\s*\(\s*\{([\s\S]*?)\}\s*\)/m;
   const match = modelFileContent.match(schemaRegex);
 
   if (match) {
     try {
       const schemaContent = match[1];
-      const fieldRegex = /(\w+):\s*\{/g;
+      const fieldRegex = /(\w+):\s*\{[\s\S]*?\}/g;
       const schemaKeys = [];
       let fieldMatch;
       while ((fieldMatch = fieldRegex.exec(schemaContent)) !== null) {
@@ -67,12 +70,12 @@ function getModelSchema(modelName) {
       }
       return schemaKeys;
     } catch (error) {
-      console.error("Error parsing schema: ", error);
-      process.exit(1);
+      console.error(chalk.red("Error parsing schema: "), error);
+      return [];
     }
   } else {
-    console.error("Schema not found in model file.");
-    process.exit(1);
+    console.error(chalk.red("Schema not found in model file."));
+    return [];
   }
 }
 
@@ -110,8 +113,10 @@ try {
 `;
 
   if (!fs.existsSync(routeFilePath)) {
-    console.error(`The specified route file does not exist: ${routeFilePath}`);
-    process.exit(1);
+    console.error(
+      chalk.red(`The specified route file does not exist: ${routeFilePath}`)
+    );
+    return;
   }
 
   let routeContent = fs.readFileSync(routeFilePath, "utf8");
@@ -134,7 +139,7 @@ try {
   }
 
   fs.writeFileSync(routeFilePath, routeContent, "utf8");
-  console.log(`Insert template added to ${routeFile}`);
+  console.log(chalk.green(`Insert template added to ${routeFile}`));
 
   // Install bcrypt if not already installed
   if (fields.includes("password")) {
@@ -143,38 +148,66 @@ try {
 }
 
 const routeFiles = listRoutes();
+if (routeFiles.length === 0) {
+  rl.close();
+  process.exit(0);
+}
+
 const modelFiles = listModels();
+if (modelFiles.length === 0) {
+  rl.close();
+  process.exit(0);
+}
 
-console.log("Select the route file to modify:");
+console.log(chalk.cyan("Select the route file to modify:"));
 routeFiles.forEach((file, index) => {
-  console.log(`${index + 1}. ${file}`);
+  console.log(chalk.cyan(`${index + 1}. ${file}`));
 });
 
-rl.question("Enter the number of the route file: ", (routeAnswer) => {
-  const routeIndex = parseInt(routeAnswer, 10) - 1;
-  if (routeIndex >= 0 && routeIndex < routeFiles.length) {
-    const selectedRoute = routeFiles[routeIndex];
+rl.question(
+  chalk.yellow("Enter the number of the route file: "),
+  (routeAnswer) => {
+    const routeIndex = parseInt(routeAnswer, 10) - 1;
+    if (routeIndex >= 0 && routeIndex < routeFiles.length) {
+      const selectedRoute = routeFiles[routeIndex];
 
-    console.log("Select the model file to use:");
-    modelFiles.forEach((file, index) => {
-      console.log(`${index + 1}. ${file}`);
-    });
+      console.log(chalk.cyan("Select the model file to use:"));
+      modelFiles.forEach((file, index) => {
+        console.log(chalk.cyan(`${index + 1}. ${file}`));
+      });
 
-    rl.question("Enter the number of the model file: ", (modelAnswer) => {
-      const modelIndex = parseInt(modelAnswer, 10) - 1;
-      if (modelIndex >= 0 && modelIndex < modelFiles.length) {
-        const selectedModel = path.basename(modelFiles[modelIndex], ".js");
-        const schemaFields = getModelSchema(selectedModel);
+      rl.question(
+        chalk.yellow("Enter the number of the model file: "),
+        (modelAnswer) => {
+          const modelIndex = parseInt(modelAnswer, 10) - 1;
+          if (modelIndex >= 0 && modelIndex < modelFiles.length) {
+            const selectedModel = path.basename(modelFiles[modelIndex], ".js");
+            const schemaFields = getModelSchema(selectedModel);
 
-        addInsertTemplateToRoute(selectedRoute, schemaFields, selectedModel);
-        rl.close();
-      } else {
-        console.error("Invalid selection. Please choose a valid number.");
-        rl.close();
-      }
-    });
-  } else {
-    console.error("Invalid selection. Please choose a valid number.");
-    rl.close();
+            if (schemaFields.length === 0) {
+              rl.close();
+              return;
+            }
+
+            addInsertTemplateToRoute(
+              selectedRoute,
+              schemaFields,
+              selectedModel
+            );
+            rl.close();
+          } else {
+            console.error(
+              chalk.red("Invalid selection. Please choose a valid number.")
+            );
+            rl.close();
+          }
+        }
+      );
+    } else {
+      console.error(
+        chalk.red("Invalid selection. Please choose a valid number.")
+      );
+      rl.close();
+    }
   }
-});
+);

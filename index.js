@@ -4,6 +4,7 @@ import fs from "fs";
 import path from "path";
 import { execSync } from "child_process";
 import { fileURLToPath } from "url";
+import chalk from "chalk";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -53,12 +54,6 @@ function createSkeletonApp(projectName) {
   console.log("Dependencies installed successfully.");
 }
 
-function checkMongoDBConfig() {
-  const projectRoot = process.cwd();
-  const configFilePath = path.join(projectRoot, "config", "db.js");
-  return fs.existsSync(configFilePath);
-}
-
 function checkModelsExist() {
   const projectRoot = process.cwd();
   const modelsDir = path.join(projectRoot, "src", "models");
@@ -71,39 +66,47 @@ function checkRoutesDir() {
   return fs.existsSync(routesDir);
 }
 
-function validateMongoDBConfigAndModels() {
-  if (!checkMongoDBConfig()) {
-    console.error(
-      "MongoDB is not configured. Please run 'node-app add-mongodb' first."
-    );
-    process.exit(1);
-  }
-  if (!checkModelsExist()) {
-    console.error("No models found. Please create a model first.");
-    process.exit(1);
-  }
+function checkMongoConfig() {
+  const projectRoot = process.cwd();
+  const envPath = path.join(projectRoot, ".env.development");
+  return (
+    fs.existsSync(envPath) &&
+    fs.readFileSync(envPath, "utf8").includes("MONGO_URI")
+  );
 }
 
 function showHelp() {
-  console.log(`
-Usage: node-app <command> [options]
+  console.log(
+    chalk.green(`
+Usage: ${chalk.bold("node-app <command> [options]")}
 
 Commands:
-  init <projectName>        Create a new Node.js project with the given name.
-  add-api <endpointName>    Add a new API endpoint with the given name.
-  add-mongodb               Configure MongoDB for the project.
-  add-socket                Add Socket.IO support to the project.
-  add-websocket             Add WebSocket support to the project.
-  add-mongodb-schema <schemaName>  Add a new MongoDB schema with the given name.
-  add-login                 Add a login route to the project.
-  add-mongodb-insert        Add an insert route for MongoDB.
-  add-mongodb-update        Add an update route for MongoDB.
-  add-mongodb-read          Add a read route for MongoDB.
-  add-mongodb-delete        Add a delete route for MongoDB.
+  ${chalk.blue(
+    "init <projectName>"
+  )}        Create a new Node.js project with the given name.
+  ${chalk.blue(
+    "add-api <endpointName>"
+  )}    Add a new API endpoint with the given name.
+  ${chalk.blue("add-mongo")}               Configure MongoDB for the project.
+  ${chalk.blue(
+    "add-socket"
+  )}                Add Socket.IO support to the project.
+  ${chalk.blue(
+    "add-websocket"
+  )}             Add WebSocket support to the project.
+  ${chalk.blue(
+    "add-mongo-schema <schemaName>"
+  )}  Add a new MongoDB schema with the given name.
+  ${chalk.blue("add-login")}                 Add a login route to the project.
+  ${chalk.blue("add-mongo-insert")}        Add an insert route for MongoDB.
+  ${chalk.blue("add-mongo-update")}        Add an update route for MongoDB.
+  ${chalk.blue("add-mongo-read")}          Add a read route for MongoDB.
+  ${chalk.blue("add-mongo-delete")}        Add a delete route for MongoDB.
   
 Options:
-  -h, --help                Show this help message.
-`);
+  ${chalk.blue("-h, --help")}                Show this help message.
+`)
+  );
 }
 
 const args = process.argv.slice(2);
@@ -117,20 +120,20 @@ const param = args[1];
 
 if (command === "init") {
   if (!param) {
-    console.error("Usage: node-app init <projectName>");
+    console.error(chalk.red("Usage: node-app init <projectName>"));
     process.exit(1);
   }
   createSkeletonApp(param);
 } else if (command === "add-api") {
   if (!param) {
-    console.error("Usage: node-app add-api <endpointName>");
+    console.error(chalk.red("Usage: node-app add-api <endpointName>"));
     process.exit(1);
   }
   execSync(`node ${path.join(__dirname, "add-api.js")} ${param}`, {
     stdio: "inherit",
   });
-} else if (command === "add-mongodb") {
-  execSync(`node ${path.join(__dirname, "add-mongodb.js")}`, {
+} else if (command === "add-mongo") {
+  execSync(`node ${path.join(__dirname, "add-mongo.js")}`, {
     stdio: "inherit",
   });
 } else if (command === "add-socket") {
@@ -141,66 +144,79 @@ if (command === "init") {
   execSync(`node ${path.join(__dirname, "add-websocket.js")}`, {
     stdio: "inherit",
   });
-} else if (command === "add-mongodb-schema") {
-  if (!checkMongoDBConfig()) {
+} else if (command === "add-mongo-schema") {
+  if (!param) {
+    console.error(chalk.red("Usage: node-app add-mongo-schema <schemaName>"));
+    process.exit(1);
+  }
+  if (!checkMongoConfig()) {
     console.error(
-      "MongoDB is not configured. Please run 'node-app add-mongodb' first."
+      chalk.red(
+        "MongoDB is not configured. Please run 'node-app add-mongo' first."
+      )
     );
     process.exit(1);
   }
-  if (!param) {
-    console.error("Usage: node-app add-mongodb-schema <schemaName>");
-    process.exit(1);
-  }
-  execSync(`node ${path.join(__dirname, "add-mongodb-schema.js")} ${param}`, {
+  execSync(`node ${path.join(__dirname, "add-mongo-schema.js")} ${param}`, {
     stdio: "inherit",
   });
 } else if (command === "add-login") {
   if (!checkRoutesDir()) {
-    console.error("No routes directory found in src/routes");
+    console.error(chalk.red("No routes directory found in src/routes"));
     process.exit(1);
   }
-  validateMongoDBConfigAndModels();
   execSync(`node ${path.join(__dirname, "add-login.js")}`, {
     stdio: "inherit",
   });
-} else if (command === "add-mongodb-insert") {
+} else if (command === "add-mongo-insert") {
   if (!checkRoutesDir()) {
-    console.error("No routes directory found in src/routes");
+    console.error(chalk.red("No routes directory found in src/routes"));
     process.exit(1);
   }
-  validateMongoDBConfigAndModels();
-  execSync(`node ${path.join(__dirname, "add-mongodb-insert.js")}`, {
+  if (!checkModelsExist()) {
+    console.error(chalk.red("No model files found in src/models"));
+    process.exit(1);
+  }
+  execSync(`node ${path.join(__dirname, "add-mongo-insert.js")}`, {
     stdio: "inherit",
   });
-} else if (command === "add-mongodb-update") {
+} else if (command === "add-mongo-update") {
   if (!checkRoutesDir()) {
-    console.error("No routes directory found in src/routes");
+    console.error(chalk.red("No routes directory found in src/routes"));
     process.exit(1);
   }
-  validateMongoDBConfigAndModels();
-  execSync(`node ${path.join(__dirname, "add-mongodb-update.js")}`, {
+  if (!checkModelsExist()) {
+    console.error(chalk.red("No model files found in src/models"));
+    process.exit(1);
+  }
+  execSync(`node ${path.join(__dirname, "add-mongo-update.js")}`, {
     stdio: "inherit",
   });
-} else if (command === "add-mongodb-read") {
+} else if (command === "add-mongo-read") {
   if (!checkRoutesDir()) {
-    console.error("No routes directory found in src/routes");
+    console.error(chalk.red("No routes directory found in src/routes"));
     process.exit(1);
   }
-  validateMongoDBConfigAndModels();
-  execSync(`node ${path.join(__dirname, "add-mongodb-read.js")}`, {
+  if (!checkModelsExist()) {
+    console.error(chalk.red("No model files found in src/models"));
+    process.exit(1);
+  }
+  execSync(`node ${path.join(__dirname, "add-mongo-read.js")}`, {
     stdio: "inherit",
   });
-} else if (command === "add-mongodb-delete") {
+} else if (command === "add-mongo-delete") {
   if (!checkRoutesDir()) {
-    console.error("No routes directory found in src/routes");
+    console.error(chalk.red("No routes directory found in src/routes"));
     process.exit(1);
   }
-  validateMongoDBConfigAndModels();
-  execSync(`node ${path.join(__dirname, "add-mongodb-delete.js")}`, {
+  if (!checkModelsExist()) {
+    console.error(chalk.red("No model files found in src/models"));
+    process.exit(1);
+  }
+  execSync(`node ${path.join(__dirname, "add-mongo-delete.js")}`, {
     stdio: "inherit",
   });
 } else {
-  console.error("Unknown command. Use -h or --help for help.");
+  console.error(chalk.red("Unknown command. Use -h or --help for help."));
   process.exit(1);
 }

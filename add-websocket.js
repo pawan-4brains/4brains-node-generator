@@ -4,6 +4,7 @@ import fs from "fs";
 import path from "path";
 import readline from "readline";
 import { execSync } from "child_process";
+import chalk from "chalk";
 
 const rl = readline.createInterface({
   input: process.stdin,
@@ -101,13 +102,14 @@ const server = app.listen(port, () => {
   updateEnvFile(path.join(projectRoot, ".env.production"), wsPort);
 
   // Install ws library
+  console.log(chalk.green("Installing ws..."));
   execSync("npm install ws", { stdio: "inherit" });
 
-  console.log("WebSocket integration added successfully.");
+  console.log(chalk.green("WebSocket integration added successfully."));
 }
 
 rl.question(
-  "Enter the port for WebSocket server (default: 3001): ",
+  chalk.yellow("Enter the port for WebSocket server (default: 3001): "),
   (answer) => {
     const wsPort = answer.trim() || 3001;
     addWebSocket(wsPort);

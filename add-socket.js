@@ -4,6 +4,7 @@ import fs from "fs";
 import path from "path";
 import readline from "readline";
 import { execSync } from "child_process";
+import chalk from "chalk";
 
 const rl = readline.createInterface({
   input: process.stdin,
@@ -78,13 +79,14 @@ server.listen(port, () => {
   fs.writeFileSync(indexPath, indexContent, "utf8");
 
   // Install socket.io
+  console.log(chalk.green("Installing socket.io..."));
   execSync("npm install socket.io", { stdio: "inherit" });
 
-  console.log("Socket.io integration added successfully.");
+  console.log(chalk.green("Socket.io integration added successfully."));
 }
 
 rl.question(
-  "Enter the IP addresses for socket.io (comma-separated): ",
+  chalk.yellow("Enter the IP addresses for socket.io (comma-separated): "),
   (ipAddresses) => {
     addSocketIo(ipAddresses);
     rl.close();
